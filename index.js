@@ -1,6 +1,11 @@
-import 'dotenv/config';
+import "dotenv/config";
 
 import { Client, IntentsBitField } from "discord.js";
+import {
+  collectionSlashs,
+  registrySlash,
+  loadSlashCommands,
+} from "./utils/loaders.js";
 
 const client = new Client({
   intents: [
@@ -8,23 +13,26 @@ const client = new Client({
     IntentsBitField.Flags.GuildMembers,
     IntentsBitField.Flags.GuildMessages,
     IntentsBitField.Flags.MessageContent,
-  ]
-})
+  ],
+});
 
-const prefix = "!"
+client.once("clientReady", async (e) => {
+  await loadSlashCommands("commands");
 
-client.once("ready", async (e) => {
+  await registrySlash(e.user.id);
+
   console.log(`${e.user.displayName} está online!🔥`);
 });
 
-client.on("messageCreate", async (message) => {
-  if (message.author.bot || !message.guild || !message.content.startsWith(prefix)) return
-
-  const commandName = message.content.toLowerCase().split(" ")[0].substring(prefix.length);
-
-  if (commandName === "hello") {
-    message.reply({content: "Hello World!!!"})
+client.on("interactionCreate", async (interaction) => {
+  if (interaction.isChatInputCommand()) {
+    try {
+      const commandName = interaction.commandName;
+      await collectionSlashs.get(`${commandName}`)(interaction);
+    } catch (err) {
+      console.error(err);
+    }
   }
-})
+});
 
 client.login(process.env.TOKEN);
